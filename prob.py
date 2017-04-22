@@ -6,38 +6,17 @@ np.set_printoptions(threshold=np.inf)
 
 from scipy.cluster.vq import kmeans, vq
 
-
-### Swap rows and columns
-def swap_rows(C, var1, var2):
-    '''
-    Function to swap two rows in a covariance matrix,
-    updating the appropriate columns as well.
-    '''
-    D = C.copy()
-    D[var2, :] = C[var1, :]
-    D[var1, :] = C[var2, :]
-
-    E = D.copy()
-    E[:, var2] = D[:, var1]
-    E[:, var1] = D[:, var2]
-
-    return E
-
-
-
-
 ### Get complete word list
 
 os.listdir('/home/apatel435/nltk_data/corpora/reuters/training/')
 
 wordlist = [];
 num_articles = 0
-artnum = 3
+artnum = 10
 j = 0
 for filename in os.listdir('/home/apatel435/nltk_data/corpora/reuters/training/'):
     if j < artnum:
         words = reuters.words('training/' + str(filename))
-        #print(str(i) + '-' + str(words));
         wordlist.append(words)
         num_articles += 1
     j += 1
@@ -48,18 +27,22 @@ wordlist = [item for sublist in wordlist for item in sublist]
 wordlist = [x.lower() for x in wordlist]
 # Filter repeats
 wordlist = list(set(wordlist))
-
-### TODO Filter common words and special characters
-### can based it on words that only occur once
-
-
-### ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
 # Sort
 wordlist.sort()
 
-num_wordlist = len(wordlist)
 #print(wordlist)
+#print('     ')
+
+### TODO Filter common words and special characters
+### can based it on words that only occur once
+# take out numbers
+wordlist = [ x for x in wordlist if x.isalpha() ]
+
+### ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+#print(wordlist)
+
+num_wordlist = len(wordlist)
 
 ### Continue with matrix building
 
@@ -76,7 +59,7 @@ for filename in os.listdir('/home/apatel435/nltk_data/corpora/reuters/training/'
         # Filter repeats
         words = list(set(words))
 
-        # Add the one
+        # Add the one if word is in the wordlist
         for x in range(0, num_wordlist):
             if wordlist[x] in words:
                 arr[x,i] = 1
@@ -88,23 +71,28 @@ stackarr = arr[:,0]
 for x in range(1,artnum):
     stackarr = np.vstack((stackarr,arr[:,x]))
 
+# Covariance matrix
 cov_arr = np.cov(stackarr)
+#print("Covariance")
 print(cov_arr)
+print(" ")
 
 ### Perform k - means algo clustering
 
-kmeaned = kmeans(cov_arr,1)
-centroids = kmeaned[0]
+clusters = 5
 
-index = centroids.argsort()
+centroids,_= kmeans(cov_arr,clusters)
+idx,_ = vq(cov_arr,centroids)
 
-print(index)
+# Sort matrix by clusters
+# ie vectors that are in cluster one are adjacent to one another and so on
+# for each cluster
 
+index = idx.argsort();
+cov_arrsort = cov_arr[index];
 
-
-
-### Vector quantization
-
-#vecquan = vq(cov_arr,centroids)
-#print(vecquan)
-
+# Transpose matrix to sort the rows
+# Matrix is symmetric so transposing it produces the same result
+cov_arrtrans = cov_arrsort.transpose();
+cov_arrsort = cov_arrtrans[index];
+print(cov_arrsort)
